@@ -1,4 +1,4 @@
-# Caffe2GPUcpp
+# Caffe2 GPU/CPU Inference 
 
 program for GPU/CPU inference on caffe2, this could be set when loading predict_net
 
