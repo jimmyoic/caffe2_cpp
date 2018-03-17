@@ -88,7 +88,7 @@ public:
 	void initializeNetwork();    
 	void saveNetwork(std::string outputName, bool isSnapShot=false); 
 	void releaseNetwork(); // TODO
-	bool enableCUDA(uint gpuID);
+	bool enableCUDA(bool isDeviceFollowProto=true);
 	void reloadNetworkParameter(); // TODO
 	bool enableCPU();
 	void forward();
@@ -136,7 +136,7 @@ private:
 		ContextT t;
 		if(!m_Workspace.HasBlob(sBlobName)) return false;
 		auto tensor = m_Workspace.GetBlob(sBlobName)->template GetMutable<TensorT>();
-		ContextT cudaContext(*(m_Predict_net.mutable_device_option()));
+		ContextT cudaContext(m_BlobOptionMap[sBlobName]);
 		cudaContext.SwitchToDevice();
 		cudaContext. template CopyBytes< CPUContext , ContextT>(tensor->size() * sizeof(float), static_cast<void*>(input), tensor->raw_mutable_data());
 		cudaContext.FinishDeviceComputation();
@@ -162,6 +162,7 @@ private:
 	
 	
 	uint m_iGPU_ID;
+	map<string, DeviceOption> m_BlobOptionMap;
 	DeviceType m_DeviceType;
 	
 	

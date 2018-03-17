@@ -4,28 +4,10 @@
 
 void Caffe2Handler::loadNetworkProto( string sInitNetName, string sPredictNetName, bool isCUDA, int gpuID)
 {
-	
-	
-	
-	
-	
 	CAFFE_ENFORCE(ReadProtoFromFile(sInitNetName, &m_Init_net));
 	CAFFE_ENFORCE(ReadProtoFromFile(sPredictNetName, &m_Predict_net));
 	if(isCUDA){ enableCUDA(gpuID); }
 	else { enableCPU(); }
-	/*
-	for(int i=0;i < m_Predict_net.op_size(); ++i){
-		if ("Conv" == m_Predict_net.op(i).type()){
-		m_Predict_net.mutable_op(i)->set_engine("NNPACK");
-		//std::cout << "Conv engine used:" << predict_net.op(i).has_engine() << std::endl;
-		//std::cout << "Conv engine set:" << predict_net.op(i).engine() << std::endl;
-		}
-	}
-	*/
-	cout << m_Predict_net.DebugString() << endl;
-	
-	
-
 }
 void Caffe2Handler::saveNetwork(string outputName, bool isSnapShot)
 {
@@ -52,27 +34,49 @@ void Caffe2Handler::releaseNetwork()
 	m_Workspace.DeleteNet(m_Predict_net.name());
 }
 
-bool Caffe2Handler::enableCUDA(uint gpuID)
+bool Caffe2Handler::enableCUDA(bool isSetDeviceFollowProto)
 {
 	if(!HasCudaGPU()){
 		std::cerr << "No GPU found, this will be launched in CPU mode" << std::endl;
 		return false;
 		// MKLDNN?
 	}
-	// TODO: check is gpu ID available
 	m_Predict_net.mutable_device_option()->set_device_type(CUDA);
 	m_Init_net.mutable_device_option()->set_device_type(CUDA);
-	m_Predict_net.mutable_device_option()->set_cuda_gpu_id(gpuID);
-	m_Init_net.mutable_device_option()->set_cuda_gpu_id(gpuID);
 	m_DeviceType = CUDA;
+	// set input data with put data to tensor according to deviceType
+	
+	// TODO: check is gpu ID available
+	if(!isSetDeviceFollowProto){ // default runAllOnGPU on gpu 0
+		m_Predict_net.mutable_device_option()->set_cuda_gpu_id(0);
+		m_Init_net.mutable_device_option()->set_cuda_gpu_id(0);
+	}
+	
+	// record the deviceOption for data blob, in order to know which GPU or TENSOR type it needs
+	for(int i=0; i<m_Predict_net.op_size(); ++i){
+		for(int j=0;j< m_Predict_net.op(i).input_size(); ++j){
+			const string &inputBlobName = m_Predict_net.op(i).input(j);
+			if(m_BlobOptionMap.find(inputBlobName) == m_BlobOptionMap.end()){
+				m_BlobOptionMap[inputBlobName] = m_Predict_net.op(i).device_option();
+			}
+		}
+	}
 	return true; 
 }
 bool Caffe2Handler::enableCPU()
 {
 	m_Predict_net.mutable_device_option()->set_device_type(CPU);
 	m_Init_net.mutable_device_option()->set_device_type(CPU);
+	for(int i=0; i<m_Predict_net.op_size(); ++i){
+		m_Predict_net.mutable_op(i)->mutable_device_option()->set_device_type(CPU);
+			
+	}
+	for(int i=0; i<m_Init_net.op_size(); ++i){
+		m_Init_net.mutable_op(i)->mutable_device_option()->set_device_type(CPU);	
+	}
 	m_DeviceType = CPU;
 }
+
 
 void Caffe2Handler::initializeNetwork()
 {
