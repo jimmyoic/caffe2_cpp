@@ -28,20 +28,20 @@ public:
 	}	
 
 	/* need some way to fix this arch (repeated switch/case in functions) */
-	template <class ContextT = CPUContext, class TensorT = TensorCPU>
-	bool setDataInput(float* input, string sBlobName, bool isControlByDevice=true)
+	template <typename T = float, class ContextT = CPUContext, class TensorT = TensorCPU>
+	bool setDataInput(T* input, string sBlobName, bool isControlByDevice=true)
 	{
 		if(isControlByDevice){
 			switch(m_DeviceType){
-				case CPU:  return setDataInputForDevice<CPUContext, TensorCPU>(input, sBlobName);
-				case CUDA: return setDataInputForDevice<CUDAContext, TensorCUDA>(input, sBlobName); 
+				case CPU:  return setDataInputForDevice<T, CPUContext, TensorCPU>(input, sBlobName);
+				case CUDA: return setDataInputForDevice<T, CUDAContext, TensorCUDA>(input, sBlobName); 
 				default:
 					;
-					return setDataInputForDevice<CPUContext, TensorCPU>(input, sBlobName);
+					return setDataInputForDevice<T, CPUContext, TensorCPU>(input, sBlobName);
 			}
 		}
 		else{
-			return setDataInputForDevice<ContextT, TensorT>(input, sBlobName);
+			return setDataInputForDevice<T, ContextT, TensorT>(input, sBlobName);
 		}
 		return false;
 	}
@@ -130,15 +130,15 @@ private:
 		return TensorCPU(m_Workspace.GetBlob(sBlobName)->Get<TensorT>());
 	}
 	
-	template <class ContextT, class TensorT>
-	bool setDataInputForDevice(float* input, std::string sBlobName)
+	template <typename T = float, class ContextT, class TensorT>
+	bool setDataInputForDevice(T* input, std::string sBlobName)
 	{
 		ContextT t;
 		if(!m_Workspace.HasBlob(sBlobName)) return false;
 		auto tensor = m_Workspace.GetBlob(sBlobName)->template GetMutable<TensorT>();
 		ContextT cudaContext(m_BlobOptionMap[sBlobName]);
 		cudaContext.SwitchToDevice();
-		cudaContext. template CopyBytes< CPUContext , ContextT>(tensor->size() * sizeof(float), static_cast<void*>(input), tensor->raw_mutable_data());
+		cudaContext. template CopyBytes< CPUContext , ContextT>(tensor->size() * sizeof(T), static_cast<void*>(input), tensor->raw_mutable_data());
 		cudaContext.FinishDeviceComputation();
 		
 		// TODO: abstract layer for TensorCUDA/CPU?
