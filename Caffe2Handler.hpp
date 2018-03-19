@@ -93,7 +93,7 @@ public:
 	bool enableCPU();
 	void forward();
 	inline bool hasBlob(std::string sBlobName) { return m_Workspace.HasBlob(sBlobName); }
-	inline int getGPUId(){ return m_iGPU_ID;}
+	inline int getGPUId(){ return 0;}
 	inline int getBatchSize(){ return 0;}
 	inline int getInputChannelSize(){ return 0;}
 	inline int getDataWidthSize(){ return 0;}
@@ -106,16 +106,8 @@ public:
 		const T *data = cpudata.data<T>();
 		const int size = cpudata.size();
 		return std::vector<T>(data, data+size);
-		
-		// cannot return TensorCPU(m_Workspace.GetBlob(name)->Get<TensorCUDA>()).data<float>(); 
-		// need copy memory in this way (sharePtr?)
-		// maybe more efficient if get the content directly outside the function by a for loop
-		// for( auto value : TensorCPU(m_Workspace.GetBlob(name)->Get<TensorCUDA>()).data<float>() ) ....
 	}
-	
-	
 	// This return a "copied" data from device
-	
 	
 private:
 	template <class TensorT>
@@ -136,14 +128,10 @@ private:
 		ContextT t;
 		if(!m_Workspace.HasBlob(sBlobName)) return false;
 		auto tensor = m_Workspace.GetBlob(sBlobName)->template GetMutable<TensorT>();
-		ContextT cudaContext(m_BlobOptionMap[sBlobName]);
-		cudaContext.SwitchToDevice();
-		cudaContext. template CopyBytes< CPUContext , ContextT>(tensor->size() * sizeof(T), static_cast<void*>(input), tensor->raw_mutable_data());
-		cudaContext.FinishDeviceComputation();
-		
-		// TODO: abstract layer for TensorCUDA/CPU?
-	
-		
+		ContextT context(m_BlobOptionMap[sBlobName]);
+		context.SwitchToDevice();
+		context. template CopyBytes< CPUContext , ContextT>(tensor->size() * sizeof(T), static_cast<void*>(input), tensor->raw_mutable_data());
+		context.FinishDeviceComputation();
 		return true;
 	}
 	
@@ -156,17 +144,12 @@ private:
 		
 	}
 	
-
 	Workspace m_Workspace;
 	NetDef m_Init_net, m_Predict_net, m_Deploy_net;
-	
-	
-	uint m_iGPU_ID;
 	map<string, DeviceOption> m_BlobOptionMap;
 	DeviceType m_DeviceType;
 	
 	
-
 
 };
 
