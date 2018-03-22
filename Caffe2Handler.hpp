@@ -22,6 +22,9 @@ class Caffe2Handler
 public:
 	Caffe2Handler(void)
 	{
+		//default setting
+		m_bUseDefaultGPUDeviceOption=false;
+		m_DeviceType=CPU;
 	}
 	~Caffe2Handler(void)
 	{
@@ -84,14 +87,15 @@ public:
 		}
 	}
 	
-	void loadNetworkProto( string sInitNetName, string sPredictNetName, bool isCUDA, int gpuID=0);
+	void loadNetworkProto( string sInitNetName, string sPredictNetName);
 	void initializeNetwork();    
 	void saveNetwork(std::string outputName, bool isSnapShot=false); 
 	void releaseNetwork(); // TODO
-	bool enableCUDA(bool isDeviceFollowProto=true);
+	bool enableCUDA();
 	void reloadNetworkParameter(); // TODO
 	bool enableCPU();
 	void forward();
+	void setRunDevice(DeviceType deviceType, bool isFollowPrototxt=true);
 	inline bool hasBlob(std::string sBlobName) { return m_Workspace.HasBlob(sBlobName); }
 	inline int getGPUId(){ return 0;}
 	inline int getBatchSize(){ return 0;}
@@ -148,6 +152,7 @@ private:
 	NetDef m_Init_net, m_Predict_net, m_Deploy_net;
 	map<string, DeviceOption> m_BlobOptionMap;
 	DeviceType m_DeviceType;
+	bool m_bUseDefaultGPUDeviceOption;
 	
 	
 

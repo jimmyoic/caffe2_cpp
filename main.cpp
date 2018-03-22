@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
 	testForward();
 	return 0;
 }
-
+/*
 void testSaveNetwork()
 {
 	fstream f("img.bin",ios::in|ios::binary);
@@ -27,7 +27,7 @@ void testSaveNetwork()
 	f.read((char*)&imgBinary, sizeof(float)*1 * 3 * 227 * 227);
 	
 	Caffe2Handler caffe2Handler;
-	caffe2Handler.loadNetworkProto("init_net.pb", "predict_net.pb", false);
+	caffe2Handler.loadNetworkProto("init_net.pb", "predict_net.pb");
 	caffe2Handler.initializeNetwork();
 	caffe2Handler.setInputDimension("data",vector<TIndex>({1,3,227,227}));
 	caffe2Handler.setDataInput(imgBinary, "data");
@@ -36,7 +36,7 @@ void testSaveNetwork()
 	caffe2Handler.saveNetwork("test.pb");
 	
 	Caffe2Handler caffe2Handler__;
-	caffe2Handler__.loadNetworkProto("test.pb", "predict_net.pb", true);
+	caffe2Handler__.loadNetworkProto("test.pb", "predict_net.pb");
 	caffe2Handler__.initializeNetwork();
 	caffe2Handler.setInputDimension("data",vector<TIndex>({1,3,227,227}));
 	caffe2Handler__.setDataInput(imgBinary, "data");
@@ -55,13 +55,16 @@ void testSaveNetwork()
 	
 	
 }
-
+*/
 void testForward()
 {
   Caffe2Handler caffe2Handler;
 
   // false for CPU mode, True for GPU mode (default in GPU mode)
-  caffe2Handler.loadNetworkProto("init_net.pb", "predict_net.pb", false);
+  caffe2Handler.loadNetworkProto("init_net.pb", "predict_net.pb");
+  
+  // set the device for running the net. if run on CUDA, specify if we want to assign deviceOption according to prototxt
+  caffe2Handler.setRunDevice(CUDA, false);
   caffe2Handler.initializeNetwork();
   
   caffe2Handler.setInputDimension("data",vector<TIndex>({1,3,227,227}));
