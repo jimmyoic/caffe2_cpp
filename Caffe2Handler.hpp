@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 
 #include "caffe2/core/flags.h"
 #include "caffe2/core/init.h"
@@ -13,9 +14,12 @@
 #include "caffe2/utils/math.h"
 #include "caffe2/core/context_gpu.h"
 #include "caffe2/core/tensor.h"
+#include "caffe2/core/operator_gradient.h"
 
 using namespace caffe2;
 using namespace std;
+
+
 
 class Caffe2Handler 
 {
@@ -24,10 +28,11 @@ public:
 	{
 		//default setting
 		m_bUseDefaultGPUDeviceOption=false;
+		m_bIsParallel=false;
 		m_DeviceType=CPU;
 	}
 	~Caffe2Handler(void)
-	{
+	{ 
 	}	
 
 	/* need some way to fix this arch (repeated switch/case in functions) */
@@ -96,12 +101,18 @@ public:
 	bool enableCPU();
 	void forward();
 	void setRunDevice(DeviceType deviceType, bool isFollowPrototxt=true);
+	OperatorDef genOp(string type, const vector<string>& inputs, const vector<string>& outputs);
+	OperatorDef genOp(string type, const vector<string>& inputs, const vector<string>& outputs, int deviceType, int gpuID);
+	
+	inline void printNetPredictDef() { cout << m_Predict_net.DebugString() << endl;}
+	inline void printNetInitDef() { cout << m_Init_net.DebugString() << endl;}
 	inline bool hasBlob(std::string sBlobName) { return m_Workspace.HasBlob(sBlobName); }
 	inline int getGPUId(){ return 0;}
 	inline int getBatchSize(){ return 0;}
 	inline int getInputChannelSize(){ return 0;}
 	inline int getDataWidthSize(){ return 0;}
 	inline int getDataHeightSize(){ return 0;}
+	
 	
 	
 	template <typename T>
@@ -113,7 +124,7 @@ public:
 	}
 	// This return a "copied" data from device
 	
-private:
+protected:
 	template <class TensorT>
 	inline TensorT *getTensorPtrFromDeviceByName(std::string sBlobName)
 	{
@@ -148,11 +159,21 @@ private:
 		
 	}
 	
+	void collectNetParams(); // record all the blob param
+	
+	// Problem: Since Python API have record some information like tags (COMPUTED, WEIGHT, BIAS ...), we don't have those info if we load exist NetDef.
+	// Hack, Roughly find out those type by some postfix _w, _b... , if needed. (Only Test for conv, fc, bn ...). There should be some problems, but anyway do it first.
+	vector<string> m_sParams;
+	vector<string> m_sParamsWeights;
+	vector<string> m_sParamsBias;
+	vector<string> m_sParamsComputed;
+	
 	Workspace m_Workspace;
-	NetDef m_Init_net, m_Predict_net, m_Deploy_net;
+	NetDef m_Init_net, m_Predict_net;
 	map<string, DeviceOption> m_BlobOptionMap;
 	DeviceType m_DeviceType;
 	bool m_bUseDefaultGPUDeviceOption;
+	bool m_bIsParallel;
 	
 	
 
